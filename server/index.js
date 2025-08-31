@@ -18,50 +18,52 @@ mongoose.connect(MONGO_URI)
 .catch(err => console.error("DB Error:", err));
 
 // Routes
+const clientId = "YOUR_SPOTIFY_CLIENT_ID";
+const clientSecret = "YOUR_SPOTIFY_CLIENT_SECRET";
+const redirectUri = "https://therafy.onrender.com/callback"; // MUST MATCH DASHBOARD
 
-const clientId = process.env.SPOTIFY_CLIENT_ID;
-const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-const redirectUri = "https://myspotifyapp.loca.lt/callback";
-
-
-// Step 1: Redirect user to Spotify login
+// Step 1: Login route (redirect user to Spotify)
 app.get("/login", (req, res) => {
-   const scope = "user-top-read";
-  res.redirect(
+  const scope = "user-read-private user-read-email";
+  const authUrl =
     "https://accounts.spotify.com/authorize?" +
-      new URLSearchParams({
-        response_type: "code",
-        client_id: clientId,
-        scope,
-        redirect_uri: redirectUri,
-      }).toString()
-  );
+    querystring.stringify({
+      response_type: "code",
+      client_id: clientId,
+      scope: scope,
+      redirect_uri: redirectUri,
+    });
+  res.redirect(authUrl);
 });
 
-// Step 2: Spotify redirects back with a code
+// Step 2: Callback route (Spotify redirects here after login)
 app.get("/callback", async (req, res) => {
   const code = req.query.code || null;
 
-   const response = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization:
-        "Basic " +
-        Buffer.from(clientId + ":" + clientSecret).toString("base64"),
-    },
-    body: new URLSearchParams({
-      code,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
-  });
+  try {
+    const response = await axios.post(
+      "https://accounts.spotify.com/api/token",
+      querystring.stringify({
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+      }),
+      {
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(clientId + ":" + clientSecret).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
 
-  const data = await response.json();
-  const accessToken = data.access_token;
+    const { access_token, refresh_token } = response.data;
 
-  // Save the token in session, db, or pass to frontend
-  res.redirect(`http://localhost:5173/dashboard?token=${accessToken}`);
+    res.json({ access_token, refresh_token });
+  } catch (error) {
+    res.status(400).json({ error: "Failed to get tokens" });
+  }
 });
 
 // Step 3: Use token to fetch songs
