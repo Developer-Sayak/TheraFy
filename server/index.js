@@ -5,6 +5,8 @@ const axios = require('axios');
 const songRoutes = require("./routes/songRoutes");
 const fetch = require("node-fetch");
 require('dotenv').config();
+const querystring = require("querystring");
+
 
 const app = express();
 app.use(cors());
@@ -24,17 +26,19 @@ const redirectUri = "https://therafy.onrender.com/callback"; // MUST MATCH DASHB
 
 // Step 1: Login route (redirect user to Spotify)
 app.get("/login", (req, res) => {
-  const scope = "user-read-private user-read-email";
-  const authUrl =
+  const scope = "user-read-private user-read-email user-top-read";
+
+  res.redirect(
     "https://accounts.spotify.com/authorize?" +
-    querystring.stringify({
-      response_type: "code",
-      client_id: clientId,
-      scope: scope,
-      redirect_uri: redirectUri,
-    });
-  res.redirect(authUrl);
+      querystring.stringify({
+        response_type: "code",
+        client_id: clientId,
+        scope: scope,
+        redirect_uri: redirectUri,
+      })
+  );
 });
+
 
 // Step 2: Callback route (Spotify redirects here after login)
 app.get("/callback", async (req, res) => {
