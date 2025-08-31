@@ -63,6 +63,7 @@ app.get("/callback", async (req, res) => {
     );
 
     const { access_token, refresh_token } = response.data;
+    console.log("tokens",access_token,refresh_token)
 
     res.redirect(`http://localhost:5173/?access_token=${access_token}&refresh_token=${refresh_token}`);
   } catch (error) {
@@ -72,20 +73,30 @@ app.get("/callback", async (req, res) => {
 
 // Step 3: Use token to fetch songs
 app.get("/api/top-tracks", async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "No token provided" });
-
   try {
-    const spotifyRes = await fetch("https://api.spotify.com/v1/me/top/tracks", {
+    const authHeader = req.headers.authorization; // "Bearer <token>"
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const response = await fetch("https://api.spotify.com/v1/me/top/tracks?limit=10", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-    const data = await spotifyRes.json();
-    res.json(data.items || []);
+    if (!response.ok) {
+      const err = await response.json();
+      return res.status(response.status).json(err);
+    }
+
+    const data = await response.json();
+    res.json(data.items); // send array of tracks
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch from Spotify" });
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch top tracks" });
   }
 });
 
