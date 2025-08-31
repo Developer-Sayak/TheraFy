@@ -9,6 +9,18 @@ import Home from "./components/Home"; // Create a Home.jsx for home page
 import LibrarySection from "./components/LibrarySection";
 
 const App = () => {
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get("access_token");
+    const refreshToken = urlParams.get("refresh_token");
+
+    if (accessToken) {
+      localStorage.setItem("spotify_access_token", accessToken);
+      localStorage.setItem("spotify_refresh_token", refreshToken);
+      // Optionally clear query params from URL
+      window.history.replaceState({}, document.title, "/");
+    }
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-700 via-purple-900 to-black text-white pb-16">
       <Navbar />

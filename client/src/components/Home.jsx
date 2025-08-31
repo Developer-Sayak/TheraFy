@@ -24,9 +24,13 @@ const Home = () => {
     if (token) {
       const fetchSongs = async () => {
         try {
-          const response = await fetch("http://localhost:3001/api/top-tracks", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const response = await fetch(
+            "https://therafy.onrender.com/api/top-tracks",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+
           const tracks = await response.json();
           console.log("tracks", tracks);
           setSongs(tracks);
@@ -47,7 +51,7 @@ const Home = () => {
       {!localStorage.getItem("spotify_token") ? (
         <div className="flex items-center justify-center h-screen">
           <a
-            href="http://localhost:3001/login"
+            href="https://therafy.onrender.com/login"
             className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-green-600"
           >
             Login with Spotify

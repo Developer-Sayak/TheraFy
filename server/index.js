@@ -64,7 +64,7 @@ app.get("/callback", async (req, res) => {
 
     const { access_token, refresh_token } = response.data;
 
-    res.json({ access_token, refresh_token });
+    res.redirect(`http://localhost:5173/?access_token=${access_token}&refresh_token=${refresh_token}`);
   } catch (error) {
     res.status(400).json({ error: "Failed to get tokens" });
   }
@@ -73,29 +73,42 @@ app.get("/callback", async (req, res) => {
 // Step 3: Use token to fetch songs
 app.get("/api/top-tracks", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ error: "No token provided" });
+  if (!token) return res.status(401).json({ error: "No token provided" });
+
+  try {
+    const spotifyRes = await fetch("https://api.spotify.com/v1/me/top/tracks", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await spotifyRes.json();
+    res.json(data.items || []);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch from Spotify" });
   }
-
-  const result = await fetch(
-    "https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=long_term",
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-  const data = await result.json();
-
-  res.json(
-    data.items?.map((track) => ({
-      id: track.id,
-      name: track.name,
-      artist: track.artists.map((a) => a.name).join(", "),
-      album: track.album.name,
-      image: track.album.images?.[0]?.url,
-      preview_url: track.preview_url,
-    })) || []
-  );
 });
+
+app.get("/refresh", async (req, res) => {
+  const refreshToken = "AQDFIhJnuA7tTVy5p_3NdyxbgiCeJIa7E2rt-Wf-cOKZjcVeBm4zEFL25sCLWz0dfF5wsi-HD5ty3I5HKBOAF_cD1nX2tqkI7s3okj0KezZMj9tkbK7u3cgykNy7K9DGfKM"; // you should store per-user in DB/session
+  
+  const params = new URLSearchParams();
+  params.append("grant_type", "refresh_token");
+  params.append("refresh_token", refreshToken);
+
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization: "Basic " + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64"),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+  });
+
+  const data = await response.json();
+  res.json(data);
+});
+
 
 
 app.get('/api/genius/search', async (req, res) => {
