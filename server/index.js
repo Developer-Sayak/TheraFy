@@ -20,8 +20,8 @@ mongoose.connect(MONGO_URI)
 .catch(err => console.error("DB Error:", err));
 
 // Routes
-const clientId = "YOUR_SPOTIFY_CLIENT_ID";
-const clientSecret = "YOUR_SPOTIFY_CLIENT_SECRET";
+const clientId = process.env.SPOTIFY_CLIENT_ID;
+const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 const redirectUri = "https://therafy.onrender.com/callback"; // MUST MATCH DASHBOARD
 
 // Step 1: Login route (redirect user to Spotify)
