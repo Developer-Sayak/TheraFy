@@ -19,28 +19,78 @@ mongoose.connect(MONGO_URI)
 
 // Routes
 
-app.get("/api/top-tracks", async (req, res) => {
-  try {
-    const response = await fetch("https://api.deezer.com/chart/0/tracks");
-    const data = await response.json();
-    // console.log("data==",data)
+const clientId = process.env.SPOTIFY_CLIENT_ID;
+const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+const redirectUri = "https://myspotifyapp.loca.lt/callback";
 
-    const transformed = data.data.map((track) => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist?.name,
-      album: track.album?.title,
-      image: track.album?.cover_medium,
-      preview_url: track.preview,
-      duration: track.duration,
-    }));
 
-    res.json(transformed);
-  } catch (error) {
-    console.error("Error fetching top tracks:", error);
-    res.status(500).json({ error: "Failed to fetch top tracks" });
-  }
+// Step 1: Redirect user to Spotify login
+app.get("/login", (req, res) => {
+   const scope = "user-top-read";
+  res.redirect(
+    "https://accounts.spotify.com/authorize?" +
+      new URLSearchParams({
+        response_type: "code",
+        client_id: clientId,
+        scope,
+        redirect_uri: redirectUri,
+      }).toString()
+  );
 });
+
+// Step 2: Spotify redirects back with a code
+app.get("/callback", async (req, res) => {
+  const code = req.query.code || null;
+
+   const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization:
+        "Basic " +
+        Buffer.from(clientId + ":" + clientSecret).toString("base64"),
+    },
+    body: new URLSearchParams({
+      code,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+
+  const data = await response.json();
+  const accessToken = data.access_token;
+
+  // Save the token in session, db, or pass to frontend
+  res.redirect(`http://localhost:5173/dashboard?token=${accessToken}`);
+});
+
+// Step 3: Use token to fetch songs
+app.get("/api/top-tracks", async (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const result = await fetch(
+    "https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=long_term",
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  const data = await result.json();
+
+  res.json(
+    data.items?.map((track) => ({
+      id: track.id,
+      name: track.name,
+      artist: track.artists.map((a) => a.name).join(", "),
+      album: track.album.name,
+      image: track.album.images?.[0]?.url,
+      preview_url: track.preview_url,
+    })) || []
+  );
+});
+
 
 app.get('/api/genius/search', async (req, res) => {
   const query = req.query.q;
