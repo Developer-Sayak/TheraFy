@@ -88,6 +88,17 @@ app.get("/api/top-tracks", async (req, res) => {
   }
 });
 
+app.get("/deezer-search", async (req, res) => {
+  const { q } = req.query;
+  try {
+    const response = await fetch(`https://api.deezer.com/search?q=${q}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Deezer fetch failed" });
+  }
+});
+
 app.get("/refresh", async (req, res) => {
   const refreshToken = "AQDFIhJnuA7tTVy5p_3NdyxbgiCeJIa7E2rt-Wf-cOKZjcVeBm4zEFL25sCLWz0dfF5wsi-HD5ty3I5HKBOAF_cD1nX2tqkI7s3okj0KezZMj9tkbK7u3cgykNy7K9DGfKM"; // you should store per-user in DB/session
   

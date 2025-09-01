@@ -32,8 +32,10 @@ const Home = () => {
           );
 
           const tracks = await response.json();
-          console.log("tracks", tracks);
-          setSongs(tracks);
+          console.log("Raw response from backend:", tracks);
+
+          // If backend returns { items: [...] }
+          setSongs(tracks.items || tracks);
         } catch (error) {
           console.error("Failed to fetch songs:", error);
         }
